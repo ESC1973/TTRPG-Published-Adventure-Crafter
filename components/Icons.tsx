@@ -59,3 +59,11 @@ export const DownloadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
     </svg>
 );
+
+export const InquisitionIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
+        <path d="M50,10 L55,10 L55,30 L70,30 L70,35 L55,35 L55,90 L50,90 L50,35 L30,35 L30,30 L50,30 L50,10 Z" />
+        <path d="M42,25 C39.791,25 38,23.209 38,21 C38,18.791 39.791,17 42,17 C44.209,17 46,18.791 46,21 C46,23.209 44.209,25 42,25 Z M58,25 C55.791,25 54,23.209 54,21 C54,18.791 55.791,17 58,17 C60.209,17 62,18.791 62,21 C62,23.209 60.209,25 58,25 Z" />
+        <path d="M50,22 C48.895,22 48,21.105 48,20 C48,18.895 48.895,18 50,18 C51.105,18 52,18.895 52,20 C52,21.105 51.105,22 50,22 Z M50,28 C51.657,28 53,26.657 53,25 L47,25 C47,26.657 48.343,28 50,28 Z" />
+    </svg>
+);

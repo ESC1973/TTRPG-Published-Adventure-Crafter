@@ -1,6 +1,5 @@
-
 import React, { useState, useCallback, useRef } from 'react';
-import { UploadIcon, FileIcon } from './Icons';
+import { UploadIcon, FileIcon, InquisitionIcon } from './Icons';
 
 const CloseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -108,9 +107,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-900 bg-[url('https://www.transparenttextures.com/patterns/gplay.png')] p-4">
-      <div className="w-full max-w-3xl p-8 space-y-6 bg-gray-800/80 backdrop-blur-sm rounded-lg shadow-2xl border border-red-900/50">
+    <div className="flex items-center justify-center min-h-screen p-4">
+      <div className="w-full max-w-3xl p-8 space-y-6 bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-2xl border border-yellow-800/50">
         <div className="text-center">
+          <InquisitionIcon className="w-24 h-24 mx-auto text-yellow-600/70 mb-4" />
           <h1 className="text-4xl font-bold text-red-400">TTRPG Adventure Crafter</h1>
           <p className="mt-2 text-gray-400">Generate a playable Solo World State from your adventure texts.</p>
         </div>
