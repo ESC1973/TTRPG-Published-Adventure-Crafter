@@ -17,7 +17,7 @@ const worldStateSchema = {
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    id: { type: Type.STRING, description: "Unique ID, e.g., 'Thread-1'" },
+                    id: { type: Type.STRING, description: "Unique ID, e.g., 'Thread-1' or 'Thread-OPT-1' for optional threads." },
                     goal: { type: Type.STRING },
                     description: { type: Type.STRING, description: "A clear, actionable summary of the overall goal of this thread. It should explain the thread's importance and hint at the first logical step." },
                     location: { type: Type.STRING, description: "ID of associated Location" },
@@ -31,11 +31,11 @@ const worldStateSchema = {
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    id: { type: Type.STRING, description: "Unique ID, e.g., 'NPC-1'" },
+                    id: { type: Type.STRING, description: "Unique ID, e.g., 'NPC-1' or 'NPC-OPT-1' for optional NPCs." },
                     name: { type: Type.STRING },
-                    description: { type: Type.STRING, description: "Visuals and demeanor. Include details about their immediate actions and any notable gear they possess." },
+                    description: { type: Type.STRING, description: "Visuals and demeanor. Include details about their immediate actions and any notable gear they possess. Provide descriptors about their personality." },
                     disposition: { type: Type.STRING },
-                    motivation: { type: Type.STRING, description: "Be explicit about what this NPC wants to achieve, both in the short term (within the scene) and long term (in the adventure)." },
+                    motivation: { type: Type.STRING, description: "Be explicit about what this NPC wants to achieve, both in the short term (within the scene) and long term (in the adventure). Insert relationships with relevant NPC (allies and/or enemies)" },
                     secrets: { type: Type.STRING },
                     statBlockSuggestion: { type: Type.STRING, description: "e.g., 'Heretek (Core Rulebook p. 346)'" }
                 },
@@ -48,7 +48,7 @@ const worldStateSchema = {
                 type: Type.OBJECT,
                 properties: {
                     id: { type: Type.STRING, description: "Unique ID, e.g., 'AF-1'" },
-                    feature: { type: Type.STRING },
+                    feature: { type: Type.STRING, description: "which is anything special or unique that is part of this published Adventure that could form an encounter" },
                     description: { type: Type.STRING }
                 },
                 required: ["id", "feature", "description"]
@@ -59,8 +59,9 @@ const worldStateSchema = {
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    id: { type: Type.STRING, description: "Unique ID, e.g., 'SCENE-01'" },
+                    id: { type: Type.STRING, description: "Unique ID, e.g., 'SCENE-01' or 'SCENE-OPT-1' for optional scenes." },
                     title: { type: Type.STRING },
+                    locationId: { type: Type.STRING, description: "The ID of the Location where this scene takes place. This is a mandatory link. Every scene MUST have a locationId." },
                     setup: { type: Type.STRING, description: "Detailed, immersive setup. For scenes after the first, it MUST begin by explaining how the Acolytes arrived, referencing the specific clue from the previous scene. It must establish the immediate situation, the player's objective, and any critical starting information. Integrate key NPC dialogue or actions from the source text to guide the player." },
                     obstacles: { type: Type.ARRAY, items: { type: Type.STRING } },
                     mechanics: { type: Type.ARRAY, items: { type: Type.STRING, description: "e.g., 'Tech-Use (-10) to bypass cogitator'" } },
@@ -99,7 +100,7 @@ const worldStateSchema = {
                         }
                     }
                 },
-                required: ["id", "title", "setup", "obstacles", "mechanics", "milestones", "encounters", "associatedNpcs", "associatedThreads", "branching"]
+                required: ["id", "title", "locationId", "setup", "obstacles", "mechanics", "milestones", "encounters", "associatedNpcs", "associatedThreads", "branching"]
             }
         },
         locations: {
@@ -107,7 +108,7 @@ const worldStateSchema = {
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    id: { type: Type.STRING, description: "Unique ID, e.g., 'LOC-01'" },
+                    id: { type: Type.STRING, description: "Unique ID, e.g., 'LOC-01' or 'LOC-OPT-1' for optional locations." },
                     name: { type: Type.STRING },
                     description: { type: Type.STRING, description: "A functional and atmospheric description. Mention key features, potential points of interaction, and any obvious, immediately visible entry or exit points." },
                     tone: { type: Type.STRING, description: "Atmosphere of the location, e.g., 'Oppressive, industrial dread'" },
@@ -146,53 +147,54 @@ const worldStateSchema = {
     required: ["threads", "npcs", "adventureFeatures", "scenes", "locations"]
 };
 
+
+async function callGemini(prompt: string, schema: object): Promise<any> {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-3-pro-preview",
+            contents: [{ parts: [{ text: prompt }] }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema,
+                temperature: 0.4,
+            },
+        });
+
+        const jsonText = response.text.trim();
+        return JSON.parse(jsonText);
+    } catch (e) {
+        console.error("Error during a Gemini API call:", e);
+        if (e instanceof Error) {
+            throw new Error(`Gemini API Error: ${e.message}`);
+        }
+        throw new Error("An unexpected error occurred while communicating with the Gemini API.");
+    }
+}
+
+
 export async function generateWorldState(adventureText: string, additionalTexts: { name: string, content: string }[]): Promise<WorldState> {
-  const formattedAdditionalTexts = additionalTexts.length > 0 
-    ? `
+    const formattedAdditionalTexts = additionalTexts.length > 0
+        ? `
 **ADDITIONAL TEXTS (FOR LORE & RULES ENRICHMENT):**
-You MUST use the following texts to enrich the adventure. Cross-reference them for terminology, atmosphere, item stats, NPC details, and mechanical suggestions.
+You MUST use the following texts to enrich the adventure. Cross-reference them for terminology, atmosphere, item stats, NPC details, and mechanical suggestions. These are your sourcebooks.
 
 ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n--- END OF ${file.name} ---`).join('\n\n')}
 `
-    : '';
+        : '';
 
-  const prompt = `
-    You are an expert Game Master for the Dark Heresy 1st Edition TTRPG. Your task is become a Table Top Roleplaying Game level designer to transform the provided adventure text into a structured "World State" for solo roleplaying.
+    // --- STEP 1: Foundation Generation ---
+    const foundationPrompt = `
+    You are an expert Game Master for Dark Heresy 1st Edition. Your task is to analyze the provided INPUT TEXT and transform it into a foundational "World State" JSON object. Your focus is accuracy and faithful representation of the source material.
 
-    **GUIDING PRINCIPLE: CLARITY FOR THE AI GAME MASTER**
-    The generated World State will be used as a script for another AI to run the adventure. Therefore, every description, goal, and piece of information MUST be exceptionally clear, detailed, and unambiguous. The goal is to provide a comprehensive guide that leaves no room for misinterpretation, giving the Acolytes (and the AI GM) a clear understanding of what to do, why it's important, and how to proceed.
+    **GUIDING PRINCIPLE: CLARITY & ACCURACY**
+    Every description, goal, and piece of information MUST be exceptionally clear, detailed, and directly extracted or logically inferred from the INPUT TEXT.
 
-    **CRITICAL INSTRUCTION: THE PATH OF CLUES (NON-NEGOTIABLE)**
-    This is the absolute most important rule. Failure to follow this with extreme precision will render the output useless. You must act as a forensic analyst. For every single scene, you MUST identify the specific, tangible clue, item, or piece of information that enables progress to the next logical scene. This information MUST be embedded directly and explicitly.
-    1.  **Justify Progression Explicitly (MANDATORY):** The 'setup' for every scene after the first **MUST** begin by explaining HOW the Acolytes arrived, referencing the **SPECIFIC** clue from the previous scene. You should almost quote the discovery.
-        *   **FAILURE:** "You arrive at the warehouse."
-        *   **CORRECT:** "Using the shipping address ('K-14, Secundus Hab-Block') found on the dead cultist's note from the alleyway, you now stand before the correct warehouse..."
-    2.  **Embed Actionable Clues (MANDATORY):** Information that links scenes **MUST** be an explicit part of the 'setup', 'milestones', or 'obstacles'. The clue must be described in a way that the player understands its significance.
-        *   **VAGUE MILESTONE:** "Find the data-slate."
-        *   **ACTIONABLE MILESTONE:** "Find the cracked data-slate. On its flickering screen is a partial astropathic coordinate set and a frantic message mentioning the 'Charnel Pit Chapel' (this is the clue that leads to SCENE-03)."
-        *   **VAGUE LINK:** "A door to the north."
-        *   **ACTIONABLE LINK:** "A heavy, rust-stained blast door to the north, humming faintly. It is sealed with a cog-and-skull symbol matching the one on the key you recovered from the cultist leader (this opens the way to LOC-03)."
-    3.  **Frame Milestones as Discoveries:** The "milestones" for each scene must be specific, concrete actions or discoveries. Frame them as clear objectives that explicitly state what is gained (e.g., 'Discover the heretical pict-log on the cogitator, revealing the cult's secret meeting point (LOC-05)').
-    4. The Starting or First SCENE is one of the most important SCENES. It should be able to provide all evidences,who are and where they could be the possible suspects/criminals/heretics/enemies of the empire related to the adventure. It does not matter if they are really the baddies, but point towards them and teh Acolytes should determine through the investigation if they are or not involved in the Heresy,
-
-    **CRITICAL INSTRUCTION: EXTRACT ENCOUNTERS**
-    Adventures contain pre-scripted encounters (ambushes, social challenges, traps, environmental hazards). You MUST identify these and place them within the new 'encounters' field for the corresponding scene.
-    1.  **Identify Encounters:** Read the adventure text carefully to find any section that describes a specific, pre-planned event or challenge for the players. This is distinct from the general scene 'obstacles'.
-    2.  **Detail the Trigger:** For each encounter, you must specify the exact trigger. What action do the players take that initiates this encounter? (e.g., "Opening the large shipping container," "Attempting to hack the security terminal," "Walking down the main corridor").
-    3.  **Provide Full Description:** The encounter's description must include all relevant details from the text: the number and type of enemies, their starting positions and tactics, any important environmental features, or key dialogue for social encounters.
-
-    **GENERAL INSTRUCTIONS:**
-    1.  **Detailed and Instructive Descriptions:** Do not just describe what something looks like. Explain its purpose, its current state, and its relevance to the Acolytes' mission.
-        *   **Scene Setups:** Must act as a direct mission briefing for the player. Integrate key NPC dialogue or actions from the source text immersively.
-        *   **NPCs:** Descriptions should include demeanor, current actions, and notable gear. Motivations must be explicit.
-        *   **Threads:** Descriptions must be a clear, actionable summary of the overall goal.
-        *   **Locations:** Descriptions must be functional, not just atmospheric. Mention key features and points of interaction.
-    2.  **Enrich with Lore:** You MUST cross-reference your extensive knowledge of the Dark Heresy 1st Edition setting and the provided "ADDITIONAL TEXTS" to enrich all descriptions.
-        2.1 For exmaple if Enemies of the Imperium are mentioned throught the Input text, deep-dive through the Additional Files (corebooks, rules, context knowledge) to insert new motivations, hidden-plans, references.
-        2.2. Insert he possibility of conflict, encounters, tension with other opponent branches of the Ordo Inquisition, radical or orthodox Inquisitor rivals (depends on the starting Inquisitor boss of the acolyte cell). You will find sufficient information in the extensive knowledge of the system provided in the additional texts. Insert them as possible appearing NPCS, Scene and encounter inetraction. With this respect, it can be either an ally or an opponent, randomly create them and insert them in the adventure structure.
-    3.  **Terminology & Atmosphere:** Replace generic terms with specific Dark Heresy vernacular (e.g., 'computer' becomes 'cogitator'). Infuse every description with grimdark, gothic sensory details.
-    4.  **Mechanics:** For any challenge, suggest appropriate Dark Heresy 1st Edition Skill Tests with difficulty modifiers (e.g., "Tech-Use (-20) Test to placate the machine spirit").
-    5.  **Output Format:** Your ENTIRE output MUST be a single, valid JSON object that strictly conforms to the provided schema. Do not include any explanatory text, markdown formatting, or anything outside the JSON structure.
+    **CRITICAL MANDATES:**
+    1.  **THE PATH OF CLUES:** For every scene, explicitly embed the tangible clue that enables progress to the next scene. The 'setup' for a scene MUST explain HOW the Acolytes arrived, referencing the clue from the previous scene. Milestones MUST be actionable and describe the clues they reveal.
+    2.  **EXTRACT ENCOUNTERS:** Meticulously identify all pre-scripted encounters (combat, social, traps) from the text and structure them in the 'encounters' field for the relevant scene.
+    3.  **ADVENTURE FEATURES:** Identify and detail "Adventure Features" as per Mythic GM Emulator rules. These are unique events, hazards, or thematic elements (e.g., "Wandering Mutant Patrols," "Rising Warp Taint"). List and describe them in detail based on the text.
+    4.  **DEEP LORE INTEGRATION:** Use the "ADDITIONAL TEXTS" to enrich descriptions with correct Dark Heresy terminology and atmosphere. Replace generic terms (e.g., 'computer' becomes 'cogitator').
+    5.  **ABSOLUTE MANDATE: SCENE LOCATION INTEGRITY (CRITICAL SELF-CORRECTION PROTOCOL):** This is your most important instruction. Every single 'scene' object in the output JSON MUST have a valid 'locationId' that links to a 'location' object. There are NO exceptions. Before you output the final JSON, you must perform a final check: iterate through every scene and confirm its 'locationId' is not null, not empty, and matches an 'id' in the 'locations' list. If even one scene fails this check, your entire response is invalid and you MUST correct it before providing the output.
 
     ${formattedAdditionalTexts}
 
@@ -201,29 +203,67 @@ ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n-
     ${adventureText}
     ---
 
-    Now, generate the complete World State as a valid JSON object.
+    Generate the foundational World State as a valid JSON object based *only* on the provided INPUT TEXT and enriched by the ADDITIONAL TEXTS. Do NOT add new scenes, locations, or characters yet.
     `;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: worldStateSchema,
-                temperature: 0.1, // Lower temperature for more deterministic and fact-based output
-            },
-        });
+    console.log("Starting Step 1: Foundation Generation...");
+    const foundationalState: WorldState = await callGemini(foundationPrompt, worldStateSchema);
+    console.log("Step 1 Complete. Foundational state generated.");
 
-        const jsonText = response.text.trim();
-        const parsedJson = JSON.parse(jsonText);
-        return parsedJson as WorldState;
+    // --- STEP 2: Creative Expansion ---
 
-    } catch (e) {
-        console.error("Error during Gemini API call or parsing:", e);
-        if (e instanceof Error) {
-            throw new Error(`Gemini API Error: ${e.message}`);
-        }
-        throw new Error("An unexpected error occurred while communicating with the Gemini API.");
-    }
+    // Calculate the dynamic targets for new content
+    const targetSceneCount = foundationalState.scenes.length > 0 ? foundationalState.scenes.length : 1;
+    const targetThreadCount = foundationalState.threads.length > 0 ? foundationalState.threads.length : 1;
+    const targetNpcCount = foundationalState.npcs.length > 0 ? foundationalState.npcs.length : 1;
+    const targetLocationCount = foundationalState.locations.length > 0 ? foundationalState.locations.length : 1;
+
+    const expansionPrompt = `
+    You are a creative Level Designer for a Dark Heresy 1st Edition TTRPG campaign. You have been given a foundational "World State" JSON object. Your SOLE TASK is to creatively expand this world to make it feel like a living, breathing, and dangerous place.
+
+    **YOUR CANVAS:**
+    The provided foundational World State JSON is your starting point. You will add to it.
+
+    **YOUR PALETTE:**
+    The "ADDITIONAL TEXTS" (lore books, rulebooks) are your ONLY source of inspiration for all new content. All new creations must be 100% consistent with the tone and lore found in these texts.
+
+    **PRIMARY DIRECTIVE: CREATE A "LIVING HUB" (NON-NEGOTIABLE)**
+    1.  Identify the adventure's starting location from the foundational state (likely 'LOC-01' or the location for 'SCENE-01'). This is the mission hub, likely a voidship.
+    2.  You MUST massively expand this single hub location. Your goal is to make it feel like a small city.
+    3.  **Add at least 10 new, important sublocations** to this hub's 'sublocations' array. Draw inspiration from the lore of a Rogue Trader vessel. Examples: Navis Nobilite Sanctum (Bridge), Astropathic Choir Chambers, Enginarium Below, Grand Observation Dome, Officer's Mess, Underdeck Gutter-Market, Chirurgeon's Bay, Armoury, Ecclesiarchy Shrine, Holding Cells.
+    4.  **Add at least 10 new, optional "living world" NPCs** who inhabit this hub. Add them to the top-level 'npcs' array and also to the hub location's 'associatedNpcs' array. Their IDs must start with 'NPC-OPT-HUB-'. Give them roles appropriate to the vessel: the Rogue Trader Captain, the Chief Navigator, the Master-at-Arms, the Lead Astropath, the Master of Whispers (Seneschal), etc. Give each a detailed description, motivation, and secrets.
+    5.  **Add 2-3 new, optional, minor threads** related to the new hub NPCs and sublocations. These are ship-board side-quests. Their IDs must start with 'Thread-OPT-HUB-'.
+
+    **SECONDARY DIRECTIVE: GENERAL EXPANSION**
+    After expanding the hub, add more optional content throughout the rest of the adventure to ensure it feels dynamic.
+    
+    **REQUIRED TARGETS FOR A SUCCESSFUL EXPANSION:**
+    *   **${targetSceneCount} new optional SCENE(s):** These scenes must branch off from existing scenes in the foundational state. They should be compelling side-quests or detours.
+    *   **${targetLocationCount} new optional LOCATION(s):** This is a mandatory requirement. These can be 'in-between' locations or hidden areas.
+    *   **${targetNpcCount} new optional NPC(s):** These are "living world" characters found outside the hub.
+    *   **${targetThreadCount} new optional THREAD(s):** These minor threads should be linked to the new general content you create.
+
+    **CRITICAL INSTRUCTION: INTEGRATE SEAMLESSLY**
+    Use the prefix 'OPT' in the ID for all new general content. You must perfectly integrate all new content.
+    *   Link new scenes by updating the 'branching' array of existing scenes.
+    *   Link new locations by updating the 'links' array of existing locations.
+    *   Place new NPCs in locations by updating the 'associatedNpcs' array.
+    *   Every new scene you create, hub-related or general, MUST have its 'locationId' field set correctly.
+    *   All new items (NPCs, Threads, Scenes, Locations) MUST be added to  their respective top-level arrays in the JSON.
+
+    ${formattedAdditionalTexts}
+
+    **FOUNDATIONAL WORLD STATE JSON:**
+    ---
+    ${JSON.stringify(foundationalState)}
+    ---
+
+    Return the complete, final, and expanded World State as a single valid JSON object. It must contain both the original foundational data AND all the new, integrated optional content you were required to create, especially the expanded hub.
+    `;
+
+    console.log("Starting Step 2: Creative Expansion...");
+    const expandedState: WorldState = await callGemini(expansionPrompt, worldStateSchema);
+    console.log("Step 2 Complete. World state expanded.");
+
+    return expandedState;
 }

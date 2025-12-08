@@ -46,7 +46,7 @@ const WorldStateDisplay: React.FC<{ worldState: WorldState, onReset: () => void 
             case 'location':
                 const location = locationsById.get(activeView.id);
                 if (!location) return <div>Location not found.</div>;
-                return <LocationDetails location={location} setActiveView={setActiveView} />;
+                return <LocationDetails location={location} setActiveView={setActiveView} npcsById={npcsById} />;
             case 'npc':
                 const npc = npcsById.get(activeView.id);
                 if (!npc) return <div>NPC not found.</div>;
@@ -54,7 +54,7 @@ const WorldStateDisplay: React.FC<{ worldState: WorldState, onReset: () => void 
             case 'thread':
                 const thread = threadsById.get(activeView.id);
                 if(!thread) return <div>Thread not found.</div>;
-                return <ThreadDetails thread={thread} setActiveView={setActiveView} />;
+                return <ThreadDetails thread={thread} setActiveView={setActiveView} npcsById={npcsById} locationsById={locationsById} />;
              case 'feature':
                 const feature = adventureFeaturesById.get(activeView.id);
                 if(!feature) return <div>Adventure Feature not found.</div>;
@@ -200,7 +200,7 @@ const SceneDetails: React.FC<{ scene: Scene, setActiveView: (view: ActiveView) =
     );
 };
 
-const LocationDetails: React.FC<{ location: LocationType, setActiveView: (view: ActiveView) => void }> = ({ location, setActiveView }) => (
+const LocationDetails: React.FC<{ location: LocationType, setActiveView: (view: ActiveView) => void, npcsById: Map<string, NPC> }> = ({ location, setActiveView, npcsById }) => (
      <div>
         <h2 className="text-3xl font-bold text-red-400 mb-4">{location.id}: {location.name}</h2>
         <DetailCard title="Description">{location.description}</DetailCard>
@@ -230,7 +230,10 @@ const LocationDetails: React.FC<{ location: LocationType, setActiveView: (view: 
             ))}
         </DetailCard>}
         <DetailCard title="Associated NPCs">
-            <ul className="list-disc list-inside">{location.associatedNpcs.map((id, i) => <li key={i} className="text-red-400 cursor-pointer hover:underline" onClick={() => setActiveView({type: 'npc', id})}>{id}</li>)}</ul>
+            <ul className="list-disc list-inside">{location.associatedNpcs.map((id, i) => {
+                const npc = npcsById.get(id);
+                return <li key={i} className="text-red-400 cursor-pointer hover:underline" onClick={() => setActiveView({type: 'npc', id})}>{id}{npc ? `: ${npc.name}` : ''}</li>
+            })}</ul>
         </DetailCard>
     </div>
 );
@@ -246,18 +249,23 @@ const NpcDetails: React.FC<{ npc: NPC }> = ({ npc }) => (
     </div>
 );
 
-const ThreadDetails: React.FC<{ thread: Thread, setActiveView: (view: ActiveView) => void }> = ({ thread, setActiveView }) => (
+const ThreadDetails: React.FC<{ thread: Thread, setActiveView: (view: ActiveView) => void, npcsById: Map<string, NPC>, locationsById: Map<string, LocationType> }> = ({ thread, setActiveView, npcsById, locationsById }) => (
     <div>
         <h2 className="text-3xl font-bold text-red-400 mb-4">{thread.id}: {thread.goal}</h2>
         <DetailCard title="Description">{thread.description}</DetailCard>
         {thread.location && (
             <DetailCard title="Associated Location">
-                <p className="text-red-400 cursor-pointer hover:underline" onClick={() => setActiveView({ type: 'location', id: thread.location! })}>{thread.location}</p>
+                <p className="text-red-400 cursor-pointer hover:underline" onClick={() => setActiveView({ type: 'location', id: thread.location! })}>
+                    {thread.location}{locationsById.get(thread.location) ? `: ${locationsById.get(thread.location)!.name}` : ''}
+                </p>
             </DetailCard>
         )}
         {thread.npcs && thread.npcs.length > 0 && (
             <DetailCard title="Associated NPCs">
-                <ul className="list-disc list-inside">{thread.npcs.map((id, i) => <li key={i} className="text-red-400 cursor-pointer hover:underline" onClick={() => setActiveView({type: 'npc', id})}>{id}</li>)}</ul>
+                <ul className="list-disc list-inside">{thread.npcs.map((id, i) => {
+                     const npc = npcsById.get(id);
+                    return <li key={i} className="text-red-400 cursor-pointer hover:underline" onClick={() => setActiveView({type: 'npc', id})}>{id}{npc ? `: ${npc.name}` : ''}</li>
+                })}</ul>
             </DetailCard>
         )}
     </div>

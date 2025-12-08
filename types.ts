@@ -33,6 +33,7 @@ export interface Encounter {
 export interface Scene {
   id: string;
   title: string;
+  locationId: string;
   setup: string;
   obstacles: string[];
   mechanics: string[];
