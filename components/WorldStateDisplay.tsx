@@ -42,7 +42,7 @@ const WorldStateDisplay: React.FC<{ worldState: WorldState, onReset: () => void 
             case 'scene':
                 const scene = scenesById.get(activeView.id);
                 if (!scene) return <div>Scene not found.</div>;
-                return <SceneDetails scene={scene} setActiveView={setActiveView} npcsById={npcsById} threadsById={threadsById} />;
+                return <SceneDetails scene={scene} setActiveView={setActiveView} npcsById={npcsById} threadsById={threadsById} locationsById={locationsById} />;
             case 'location':
                 const location = locationsById.get(activeView.id);
                 if (!location) return <div>Location not found.</div>;
@@ -119,12 +119,26 @@ const WorldStateDisplay: React.FC<{ worldState: WorldState, onReset: () => void 
     );
 };
 
-const SceneDetails: React.FC<{ scene: Scene, setActiveView: (view: ActiveView) => void, npcsById: Map<string, NPC>, threadsById: Map<string, Thread> }> = ({ scene, setActiveView, npcsById, threadsById }) => {
+const SceneDetails: React.FC<{ scene: Scene, setActiveView: (view: ActiveView) => void, npcsById: Map<string, NPC>, threadsById: Map<string, Thread>, locationsById: Map<string, LocationType> }> = ({ scene, setActiveView, npcsById, threadsById, locationsById }) => {
     const branchingMap = useMemo(() => new Map(scene.branching.map(b => [b.milestone, b.nextSceneId])), [scene.branching]);
+    const location = locationsById.get(scene.locationId);
 
     return (
         <div>
-            <h2 className="text-3xl font-bold text-red-400 mb-4">{scene.id}: {scene.title}</h2>
+            <h2 className="text-3xl font-bold text-red-400 mb-2">{scene.id}: {scene.title}</h2>
+            {location ? (
+                <div
+                    className="inline-block bg-gray-700/50 border border-red-900/50 rounded-md px-4 py-2 mb-4 text-lg text-red-300 cursor-pointer hover:bg-red-900/50 hover:text-red-200 transition-colors"
+                    onClick={() => setActiveView({ type: 'location', id: scene.locationId })}
+                >
+                    <strong className="font-semibold">Location:</strong> {location.name}
+                </div>
+            ) : (
+                 <div className="w-full bg-red-900/70 border-2 border-red-600 rounded-lg p-4 mb-4 text-center">
+                    <h3 className="text-xl font-bold text-red-300">CRITICAL DATA ERROR</h3>
+                    <p className="text-red-400">This scene is not linked to a location. The AI failed to generate this crucial link.</p>
+                </div>
+            )}
             <DetailCard title="Setup">{scene.setup}</DetailCard>
             <DetailCard title="Obstacles">
                 <ul className="list-disc list-inside">{scene.obstacles.map((o, i) => <li key={i}>{o}</li>)}</ul>
@@ -209,7 +223,7 @@ const LocationDetails: React.FC<{ location: LocationType, setActiveView: (view: 
         </DetailCard>
         {location.sublocations && location.sublocations.length > 0 && <DetailCard title="Sublocations">
             {location.sublocations.map((sub, i) => (
-                <div key={i} className="mt-2 pt-2 border-t border-gray-700/50">
+                <div key={i} className={i > 0 ? "mt-4 pt-4 border-t border-gray-700/50" : ""}>
                     <p><strong>{sub.name}:</strong> {sub.description}</p>
                     <p className="text-sm text-gray-400"><em>Significance:</em> {sub.significance}</p>
                 </div>
