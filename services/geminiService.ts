@@ -37,7 +37,7 @@ const worldStateSchema = {
                     disposition: { type: Type.STRING },
                     motivation: { type: Type.STRING, description: "Be explicit about what this NPC wants to achieve, both in the short term (within the scene) and long term (in the adventure). Insert relationships with relevant NPC (allies and/or enemies)" },
                     secrets: { type: Type.STRING },
-                    statBlockSuggestion: { type: Type.STRING, description: "e.g., 'Heretek (Core Rulebook p. 346)'" }
+                    statBlockSuggestion: { type: Type.STRING, description: "e.g., 'Spitalian Preservist (Katharsys p. 112)'" }
                 },
                 required: ["id", "name", "description", "disposition", "motivation", "secrets"]
             }
@@ -62,23 +62,23 @@ const worldStateSchema = {
                     id: { type: Type.STRING, description: "Unique ID, e.g., 'SCENE-01' or 'SCENE-OPT-1' for optional scenes." },
                     title: { type: Type.STRING },
                     locationId: { type: Type.STRING, description: "The ID of the Location where this scene takes place. This is a mandatory link. Every scene MUST have a locationId." },
-                    setup: { type: Type.STRING, description: "Detailed, immersive setup. For scenes after the first, it MUST begin by explaining how the Acolytes arrived, referencing the specific clue from the previous scene. It must establish the immediate situation, the player's objective, and any critical starting information. Integrate key NPC dialogue or actions from the source text to guide the player." },
+                    setup: { type: Type.STRING, description: "Detailed, immersive setup. For scenes after the first, it MUST begin by explaining how the characters arrived, referencing the specific clue from the previous scene. It must establish the immediate situation, the player's objective, and any critical starting information. Integrate key NPC dialogue or actions from the source text to guide the player." },
                     obstacles: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    mechanics: { type: Type.ARRAY, items: { type: Type.STRING, description: "e.g., 'Tech-Use (-10) to bypass cogitator'" } },
-                    milestones: { type: Type.ARRAY, items: { type: Type.STRING, description: "A list of specific, concrete objectives. If a milestone provides a clue to another scene, it MUST explicitly state this connection. E.g., 'By hacking the cogitator, you find a hidden log file with coordinates to a warehouse in the lower hive (leads to SCENE-02)'." } },
+                    mechanics: { type: Type.ARRAY, items: { type: Type.STRING, description: "e.g., 'Tech (Ego + Intellect) to bypass console'" } },
+                    milestones: { type: Type.ARRAY, items: { type: Type.STRING, description: "A list of specific, concrete objectives. If a milestone provides a clue to another scene, it MUST explicitly state this connection. E.g., 'By hacking the console, you find a hidden log file with coordinates to a Scrapper hideout (leads to SCENE-02)'." } },
                     encounters: {
                         type: Type.ARRAY,
                         description: "A list of specific, pre-defined encounters that can occur within this scene, extracted directly from the adventure text. These can be combat, social, or environmental.",
                         items: {
                             type: Type.OBJECT,
                             properties: {
-                                name: { type: Type.STRING, description: "A concise name for the encounter, e.g., 'Scavvy Ambush'." },
+                                name: { type: Type.STRING, description: "A concise name for the encounter, e.g., 'Ganger Ambush'." },
                                 trigger: { type: Type.STRING, description: "The specific condition that causes this encounter to occur, e.g., 'Opening the crate in the corner'." },
                                 description: { type: Type.STRING, description: "A detailed description of the encounter, including enemy placement, tactics, potential dialogue, and the immediate situation." },
                                 statBlockSuggestions: {
                                     type: Type.ARRAY,
                                     items: { type: Type.STRING },
-                                    description: "Array of stat block suggestions for any enemies involved, e.g., '3x Scavvy Gangers (Core Rulebook p. 350)'"
+                                    description: "Array of stat block suggestions for any enemies involved, e.g., '3x Scrapper Gangers (Primal Punk p. 250)'"
                                 }
                             },
                             required: ["name", "trigger", "description"]
@@ -111,17 +111,17 @@ const worldStateSchema = {
                     id: { type: Type.STRING, description: "Unique ID, e.g., 'LOC-01' or 'LOC-OPT-1' for optional locations." },
                     name: { type: Type.STRING },
                     description: { type: Type.STRING, description: "A functional and atmospheric description. Mention key features, potential points of interaction, and any obvious, immediately visible entry or exit points." },
-                    tone: { type: Type.STRING, description: "Atmosphere of the location, e.g., 'Oppressive, industrial dread'" },
+                    tone: { type: Type.STRING, description: "Atmosphere of the location, e.g., 'Desperate, primal, and decaying'" },
                     associatedNpcs: { type: Type.ARRAY, items: { type: Type.STRING } },
                     associatedThreads: { type: Type.ARRAY, items: { type: Type.STRING } },
                     secrets: { type: Type.ARRAY, items: { type: Type.STRING } },
                     links: {
                         type: Type.ARRAY,
-                        description: "An array of objects describing exits to other locations. The description MUST be informative, e.g., 'A grime-covered service hatch that leads to the lower maintenance tunnels (LOC-02)'",
+                        description: "An array of objects describing exits to other locations. The description MUST be informative, e.g., 'A rusted service hatch that leads to the lower maintenance tunnels (LOC-02)'",
                         items: {
                             type: Type.OBJECT,
                             properties: {
-                                description: { type: Type.STRING, description: "The description of the exit, e.g., 'Archway North'"},
+                                description: { type: Type.STRING, description: "The description of the exit, e.g., 'Rusted door North'"},
                                 locationId: { type: Type.STRING, description: "The ID of the location this exit leads to."}
                             },
                             required: ["description", "locationId"]
@@ -176,7 +176,7 @@ export async function generateWorldState(adventureText: string, additionalTexts:
     const formattedAdditionalTexts = additionalTexts.length > 0
         ? `
 **ADDITIONAL TEXTS (FOR LORE & RULES ENRICHMENT):**
-You MUST use the following texts to enrich the adventure. Cross-reference them for terminology, atmosphere, item stats, NPC details, and mechanical suggestions. These are your sourcebooks.
+You MUST use the following texts to enrich the adventure. Cross-reference them for terminology, atmosphere, item stats, NPC details, and mechanical suggestions. These are your sourcebooks for the world of Degenesis: Rebirth.
 
 ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n--- END OF ${file.name} ---`).join('\n\n')}
 `
@@ -184,16 +184,16 @@ ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n-
 
     // --- STEP 1: Foundation Generation ---
     const foundationPrompt = `
-    You are an expert Game Master for Dark Heresy 1st Edition. Your task is to analyze the provided INPUT TEXT and transform it into a foundational "World State" JSON object. Your focus is accuracy and faithful representation of the source material.
+    You are an expert Game Master for Degenesis: Rebirth. Your task is to analyze the provided INPUT TEXT and transform it into a foundational "World State" JSON object. Your focus is accuracy and faithful representation of the source material.
 
     **GUIDING PRINCIPLE: CLARITY & ACCURACY**
     Every description, goal, and piece of information MUST be exceptionally clear, detailed, and directly extracted or logically inferred from the INPUT TEXT.
 
     **CRITICAL MANDATES:**
-    1.  **THE PATH OF CLUES:** For every scene, explicitly embed the tangible clue that enables progress to the next scene. The 'setup' for a scene MUST explain HOW the Acolytes arrived, referencing the clue from the previous scene. Milestones MUST be actionable and describe the clues they reveal.
+    1.  **THE PATH OF CLUES:** For every scene, explicitly embed the tangible clue that enables progress to the next scene. The 'setup' for a scene MUST explain HOW the characters arrived, referencing the clue from the previous scene. Milestones MUST be actionable and describe the clues they reveal.
     2.  **EXTRACT ENCOUNTERS:** Meticulously identify all pre-scripted encounters (combat, social, traps) from the text and structure them in the 'encounters' field for the relevant scene.
-    3.  **ADVENTURE FEATURES:** Identify and detail "Adventure Features" as per Mythic GM Emulator rules. These are unique events, hazards, or thematic elements (e.g., "Wandering Mutant Patrols," "Rising Warp Taint"). List and describe them in detail based on the text.
-    4.  **DEEP LORE INTEGRATION:** Use the "ADDITIONAL TEXTS" to enrich descriptions with correct Dark Heresy terminology and atmosphere. Replace generic terms (e.g., 'computer' becomes 'cogitator').
+    3.  **ADVENTURE FEATURES:** Identify and detail "Adventure Features" as per Mythic GM Emulator rules. These are unique events, hazards, or thematic elements (e.g., "Wandering Scrapper Gangs," "Spore Infestation Level Rising"). List and describe them in detail based on the text.
+    4.  **DEEP LORE INTEGRATION:** Use the "ADDITIONAL TEXTS" to enrich descriptions with correct Degenesis terminology and atmosphere. Replace generic terms (e.g., 'computer' becomes 'stream console').
     5.  **ABSOLUTE MANDATE: SCENE LOCATION INTEGRITY (CRITICAL SELF-CORRECTION PROTOCOL):** This is your most important instruction. Every single 'scene' object in the output JSON MUST have a valid 'locationId' that links to a 'location' object. There are NO exceptions. Before you output the final JSON, you must perform a final check: iterate through every scene and confirm its 'locationId' is not null, not empty, and matches an 'id' in the 'locations' list. If even one scene fails this check, your entire response is invalid and you MUST correct it before providing the output.
 
     ${formattedAdditionalTexts}
@@ -212,14 +212,13 @@ ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n-
 
     // --- STEP 2: Creative Expansion ---
 
-    // Calculate the dynamic targets for new content
     const targetSceneCount = foundationalState.scenes.length > 0 ? foundationalState.scenes.length : 1;
     const targetThreadCount = foundationalState.threads.length > 0 ? foundationalState.threads.length : 1;
     const targetNpcCount = foundationalState.npcs.length > 0 ? foundationalState.npcs.length : 1;
     const targetLocationCount = foundationalState.locations.length > 0 ? foundationalState.locations.length : 1;
 
     const expansionPrompt = `
-    You are a creative Level Designer for a Dark Heresy 1st Edition TTRPG campaign. You have been given a foundational "World State" JSON object. Your SOLE TASK is to creatively expand this world to make it feel like a living, breathing, and dangerous place.
+    You are a creative Level Designer for a Degenesis: Rebirth TTRPG campaign. You have been given a foundational "World State" JSON object. Your SOLE TASK is to creatively expand this world to make it feel like a living, breathing, and dangerous place.
 
     **YOUR CANVAS:**
     The provided foundational World State JSON is your starting point. You will add to it.
@@ -228,11 +227,11 @@ ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n-
     The "ADDITIONAL TEXTS" (lore books, rulebooks) are your ONLY source of inspiration for all new content. All new creations must be 100% consistent with the tone and lore found in these texts.
 
     **PRIMARY DIRECTIVE: CREATE A "LIVING HUB" (NON-NEGOTIABLE)**
-    1.  Identify the adventure's starting location from the foundational state (likely 'LOC-01' or the location for 'SCENE-01'). This is the mission hub, likely a voidship.
-    2.  You MUST massively expand this single hub location. Your goal is to make it feel like a small city.
-    3.  **Add at least 10 new, important sublocations** to this hub's 'sublocations' array. Draw inspiration from the lore of a Rogue Trader vessel. Examples: Navis Nobilite Sanctum (Bridge), Astropathic Choir Chambers, Enginarium Below, Grand Observation Dome, Officer's Mess, Underdeck Gutter-Market, Chirurgeon's Bay, Armoury, Ecclesiarchy Shrine, Holding Cells.
-    4.  **Add at least 10 new, optional "living world" NPCs** who inhabit this hub. Add them to the top-level 'npcs' array and also to the hub location's 'associatedNpcs' array. Their IDs must start with 'NPC-OPT-HUB-'. Give them roles appropriate to the vessel: the Rogue Trader Captain, the Chief Navigator, the Master-at-Arms, the Lead Astropath, the Master of Whispers (Seneschal), etc. Give each a detailed description, motivation, and secrets.
-    5.  **Add 2-3 new, optional, minor threads** related to the new hub NPCs and sublocations. These are ship-board side-quests. Their IDs must start with 'Thread-OPT-HUB-'.
+    1.  Identify the adventure's starting location from the foundational state. This is the mission hub, likely a major settlement like Justitian, a fortified Spitalian hospital, or a remote Chronicler archive.
+    2.  You MUST massively expand this single hub location. Your goal is to make it feel like a real, functioning post-apocalyptic settlement.
+    3.  **Add at least 10 new, important sublocations** to this hub's 'sublocations' array. Draw inspiration from the lore of Degenesis. Examples: A grimy Scrapper Market, the local Spitalian Infirmary, a hidden Anubian's den, the Chronicler's data-node, a Hellvetic Guard Post, a bustling tavern filled with Scourgers.
+    4.  **Add at least 10 new, optional "living world" NPCs** who inhabit this hub. Add them to the top-level 'npcs' array and also to the hub location's 'associatedNpcs' array. Their IDs must start with 'NPC-OPT-HUB-'. Give them roles appropriate to the settlement: the pragmatic Spitalian Doctor, the weary Hellvetic Sergeant, a conniving Chronicler data-broker, a zealous Jehammedan Arbiter, a mysterious Anubian Psychonaut. Give each a detailed description, motivation, and secrets.
+    5.  **Add 2-3 new, optional, minor threads** related to the new hub NPCs and sublocations. These are settlement-based side-quests. Their IDs must start with 'Thread-OPT-HUB-'.
 
     **SECONDARY DIRECTIVE: GENERAL EXPANSION**
     After expanding the hub, add more optional content throughout the rest of the adventure to ensure it feels dynamic.
@@ -249,7 +248,7 @@ ${additionalTexts.map(file => `--- START OF ${file.name} ---\n${file.content}\n-
     *   Link new locations by updating the 'links' array of existing locations.
     *   Place new NPCs in locations by updating the 'associatedNpcs' array.
     *   Every new scene you create, hub-related or general, MUST have its 'locationId' field set correctly.
-    *   All new items (NPCs, Threads, Scenes, Locations) MUST be added to  their respective top-level arrays in the JSON.
+    *   All new items (NPCs, Threads, Scenes, Locations) MUST be added to their respective top-level arrays in the JSON.
 
     ${formattedAdditionalTexts}
 

@@ -67,3 +67,10 @@ export const InquisitionIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) 
         <path d="M50,22 C48.895,22 48,21.105 48,20 C48,18.895 48.895,18 50,18 C51.105,18 52,18.895 52,20 C52,21.105 51.105,22 50,22 Z M50,28 C51.657,28 53,26.657 53,25 L47,25 C47,26.657 48.343,28 50,28 Z" />
     </svg>
 );
+
+export const DegenesisIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="currentColor">
+        <path d="M50 10 L90 50 L50 90 L10 50 Z M50 20 L80 50 L50 80 L20 50 Z" />
+        <circle cx="50" cy="50" r="10" />
+    </svg>
+);

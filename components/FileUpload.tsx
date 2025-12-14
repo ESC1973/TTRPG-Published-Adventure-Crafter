@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { UploadIcon, FileIcon, InquisitionIcon } from './Icons';
+import { UploadIcon, FileIcon, DegenesisIcon } from './Icons';
 
 const CloseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -24,9 +24,19 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
   const [isDraggingAdditional, setIsDraggingAdditional] = useState(false);
   const additionalFilesInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper function to validate file types
+  const isValidFileType = (file: File) => {
+    const validExtensions = ['.txt', '.md'];
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    // Check extension primarily, but also allow standard text MIME types
+    const isTextType = file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/x-markdown' || !file.type; // !file.type allows files where OS doesn't report MIME correctly but extension is valid
+    return hasValidExtension || (isTextType && hasValidExtension);
+  };
+
   const handleAdventureFileChange = useCallback((selectedFile: File | null) => {
     if (selectedFile) {
-        if (selectedFile.type === 'text/plain') {
+        if (isValidFileType(selectedFile)) {
             setAdventureFile(selectedFile);
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -34,14 +44,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
             };
             reader.readAsText(selectedFile);
         } else {
-             alert('The adventure file must be a .txt file.');
+             alert('The adventure file must be a .txt or .md file.');
         }
     }
   }, []);
 
   const handleAdditionalFilesChange = useCallback((selectedFiles: FileList | null) => {
     if (selectedFiles) {
-        const newFiles = Array.from(selectedFiles).filter(f => f.type === 'text/plain');
+        const newFiles = Array.from(selectedFiles).filter(f => isValidFileType(f));
         
         const uniqueNewFiles = newFiles.filter(newFile => 
             !additionalFiles.some(existingFile => existingFile.name === newFile.name)
@@ -61,7 +71,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
         }
         
         if (newFiles.length !== selectedFiles.length) {
-            alert('Some files were not .txt files and were ignored.');
+            alert('Some files were not .txt or .md files and were ignored.');
         }
     }
   }, [additionalFiles]);
@@ -108,18 +118,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-3xl p-8 space-y-6 bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-2xl border border-yellow-800/50">
+      <div className="w-full max-w-3xl p-8 space-y-6 bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-2xl border border-orange-800/50">
         <div className="text-center">
-          <InquisitionIcon className="w-24 h-24 mx-auto text-yellow-600/70 mb-4" />
-          <h1 className="text-4xl font-bold text-red-400">TTRPG Adventure Crafter</h1>
-          <p className="mt-2 text-gray-400">Generate a playable Solo World State from your adventure texts.</p>
+          <DegenesisIcon className="w-24 h-24 mx-auto text-orange-500/70 mb-4" />
+          <h1 className="text-4xl font-bold text-orange-400">Degenesis Adventure Crafter</h1>
+          <p className="mt-2 text-gray-400">Generate a Solo World State for the Post-Apocalyptic Age.</p>
         </div>
 
         {/* Adventure File Upload */}
         <div className="space-y-2">
-            <h2 className="text-xl text-gray-300 font-semibold">1. Upload Input Text (The Adventure)</h2>
+            <h2 className="text-xl text-gray-300 font-semibold">1. Upload Adventure Scenario (.txt or .md)</h2>
             <div
-                className={`flex justify-center items-center w-full p-6 border-2 ${isDraggingAdventure ? 'border-red-500 bg-gray-700' : 'border-gray-600 border-dashed'} rounded-lg cursor-pointer transition-colors duration-300`}
+                className={`flex justify-center items-center w-full p-6 border-2 ${isDraggingAdventure ? 'border-orange-500 bg-gray-700' : 'border-gray-600 border-dashed'} rounded-lg cursor-pointer transition-colors duration-300`}
                 {...createDragHandlers(setIsDraggingAdventure)}
                 onDrop={onDropAdventure}
                 onClick={() => adventureFileInputRef.current?.click()}
@@ -128,21 +138,21 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
                     ref={adventureFileInputRef}
                     type="file"
                     className="hidden"
-                    accept=".txt"
+                    accept=".txt,.md"
                     onChange={(e) => handleAdventureFileChange(e.target.files ? e.target.files[0] : null)}
                 />
                 {adventureFile ? (
                     <div className="text-center">
-                    <FileIcon className="w-12 h-12 mx-auto text-red-400" />
+                    <FileIcon className="w-12 h-12 mx-auto text-orange-400" />
                     <p className="mt-2 text-lg font-semibold text-gray-200">{adventureFile.name}</p>
                     <p className="text-sm text-gray-400">{(adventureFile.size / 1024).toFixed(2)} KB</p>
-                    <button onClick={(e) => { e.stopPropagation(); setAdventureFile(null); setAdventureFileContent(''); if(adventureFileInputRef.current) adventureFileInputRef.current.value = ''; }} className="mt-2 text-xs text-red-500 hover:underline">Replace file</button>
+                    <button onClick={(e) => { e.stopPropagation(); setAdventureFile(null); setAdventureFileContent(''); if(adventureFileInputRef.current) adventureFileInputRef.current.value = ''; }} className="mt-2 text-xs text-orange-500 hover:underline">Replace file</button>
                     </div>
                 ) : (
                     <div className="text-center">
                     <UploadIcon className="w-12 h-12 mx-auto text-gray-500" />
-                    <p className="mt-2 text-gray-300"><span className="font-semibold text-red-400">Click to upload</span> or drag and drop</p>
-                    <p className="text-xs text-gray-500">A single .txt file</p>
+                    <p className="mt-2 text-gray-300"><span className="font-semibold text-orange-400">Click to upload</span> or drag and drop</p>
+                    <p className="text-xs text-gray-500">A single .txt or .md file</p>
                     </div>
                 )}
             </div>
@@ -150,9 +160,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
 
          {/* Additional Files Upload */}
         <div className="space-y-2">
-            <h2 className="text-xl text-gray-300 font-semibold">2. Upload Additional Texts <span className="text-gray-500 text-sm">(Optional)</span></h2>
+            <h2 className="text-xl text-gray-300 font-semibold">2. Upload Lore &amp; Rulebooks <span className="text-gray-500 text-sm">(Optional)</span></h2>
             <div
-                className={`flex justify-center items-center w-full p-6 border-2 ${isDraggingAdditional ? 'border-red-500 bg-gray-700' : 'border-gray-600 border-dashed'} rounded-lg cursor-pointer transition-colors duration-300`}
+                className={`flex justify-center items-center w-full p-6 border-2 ${isDraggingAdditional ? 'border-orange-500 bg-gray-700' : 'border-gray-600 border-dashed'} rounded-lg cursor-pointer transition-colors duration-300`}
                  {...createDragHandlers(setIsDraggingAdditional)}
                 onDrop={onDropAdditional}
                 onClick={() => additionalFilesInputRef.current?.click()}
@@ -162,13 +172,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
                     type="file"
                     multiple
                     className="hidden"
-                    accept=".txt"
+                    accept=".txt,.md"
                     onChange={(e) => handleAdditionalFilesChange(e.target.files)}
                 />
                  <div className="text-center">
                     <UploadIcon className="w-12 h-12 mx-auto text-gray-500" />
-                    <p className="mt-2 text-gray-300"><span className="font-semibold text-red-400">Click to upload</span> or drag and drop</p>
-                    <p className="text-xs text-gray-500">Rulebooks, Lore, Settings etc. (.txt files)</p>
+                    <p className="mt-2 text-gray-300"><span className="font-semibold text-orange-400">Click to upload</span> or drag and drop</p>
+                    <p className="text-xs text-gray-500">Katharsys, Primal Punk etc. (.txt or .md files)</p>
                 </div>
             </div>
              {additionalFiles.length > 0 && (
@@ -176,7 +186,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
                     {additionalFiles.map(file => (
                         <div key={file.name} className="flex items-center justify-between bg-gray-700 p-2 rounded-md text-sm">
                             <span className="truncate text-gray-300" title={file.name}>{file.name}</span>
-                            <button onClick={() => removeAdditionalFile(file.name)} className="p-1 rounded-full text-gray-500 hover:text-red-400 hover:bg-gray-600">
+                            <button onClick={() => removeAdditionalFile(file.name)} className="p-1 rounded-full text-gray-500 hover:text-orange-400 hover:bg-gray-600">
                                 <CloseIcon className="w-4 h-4" />
                             </button>
                         </div>
@@ -189,7 +199,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onGenerate }) => {
           <button
             onClick={handleSubmit}
             disabled={!adventureFileContent}
-            className="w-full px-4 py-3 text-lg font-bold text-white bg-red-800 rounded-md hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+            className="w-full px-4 py-3 text-lg font-bold text-white bg-orange-800 rounded-md hover:bg-orange-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-opacity-50"
           >
             Generate World State
           </button>
